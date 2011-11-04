@@ -8,17 +8,37 @@
     </head>
     <body>
         <div id="container"></div>
-        <div>
-            <ul>
-                {% for sig in all_sigs %}
-                    <li><input class="signal-select" type="checkbox" name="{{ sig.id }}" {% if sig in default_sigs %}checked="checked"{% endif %} />
-                    <label for="{{ sig.id }}">{{ sig }}</label>
-                    </li>
-                {% endfor %}
-            </ul>
-            <input type="submit" name="Submit" value="Submit" id="get-signals" />
-        </div>
         <script type="text/javascript">
+            var typemap = {
+                real: 'line',
+                bool: 'area',
+            }
+            var markermap = {
+                real: {
+                    enabled: false,
+                    symbol: 'circle',
+                    radius: 2,
+                    states: {
+                        hover: {
+                            enabled: true
+                        }
+                    }
+                },
+                bool: {
+                    enabled: false,
+                    symbol: 'circle',
+                    radius: 2,
+                    states: {
+                        hover: {
+                            enabled: true
+                        }
+                    }
+                }
+            };
+            var axismap = {
+                real: 0,
+                bool: 1
+            };
             var chart;
             var signal_meta = [
                 {% for s in all_sigs %}
@@ -26,7 +46,7 @@
                 {% endfor %}
             ];
             var default_sigs = [
-                {% for s in default_sigs %}
+                {% for s in all_sigs %}
                     {{ s.id }},
                 {% endfor %}
             ];
@@ -44,7 +64,13 @@
                         $.each(sig.data, function(validx, itm) {
                             sigdata.push([Date.parse(itm.t).valueOf(), itm.v]);
                         });
-                        signaldata.push({name: sig.name, data: sigdata});
+                        signaldata.push({
+                            name: sig.name, 
+                            data: sigdata, 
+                            type: typemap[sig.type], 
+                            marker: markermap[sig.type],
+                            yAxis: axismap[sig.type]
+                        });
                     });
                     
                     callback(signaldata);
@@ -56,19 +82,39 @@
                     chart = new Highcharts.Chart({
                         chart: {
                             renderTo: 'container',
-                            type: 'line'
+                            zoomType: 'x'
+                        },
+                        global: { useUTC: true},
+                        credits: {
+                            enabled: false
                         },
                         title: {
                             text: 'Climate'
                         },
+                        plotOptions: {
+                            area: {
+                                fillOpacity: 0.25
+                            }
+                        },
+                        tooltip: { shared: true, crosshairs: true},
                         xAxis: {
                             type: 'datetime',
                         },
-                        yAxis: {
+                        yAxis: [{ // Temperature axis
                             title: {
                                 text: 'deg F'
                             }
                         },
+                        {
+                            title: {
+                                text: ''
+                            },
+                            min: 0.0,
+                            max: 6.0,
+                            startOnTick: false,
+                            endOnTick: false,
+                            labels: {enabled: false}
+                        }],
                         series: signaldata
                     });
                 }
