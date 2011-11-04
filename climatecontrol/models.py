@@ -32,6 +32,7 @@ class Thermostat(models.Model):
     ip_address = models.IPAddressField()
     last_recurring_setpoint = models.ForeignKey('RecurringWeeklySetpoint', null=True, blank=True, related_name='thermostat_recurring_setpoint')
     last_scheduled_setpoint = models.ForeignKey('ScheduledHoldSetpoint', null=True, blank=True, related_name='thermostat_scheduled_setpoint')
+    mode = models.CharField(choices=SETPOINT_MODES, max_length='4')
 
     def __unicode__(self):
         return "Filtrete 3M-50 Radio Thermostat [%s]" % self.ip_address
@@ -45,7 +46,7 @@ class TemperatureSetpoint(models.Model):
     # Can be specific to one thermostat, or apply to all
     thermostat = models.ForeignKey(Thermostat, null=True, blank=True)
     setpoint = models.FloatField()
-    mode = models.CharField(choices=SETPOINT_MODES, max_length=4, default='auto')
+    mode = models.CharField(choices=SETPOINT_MODES, max_length=4)
 
     def __unicode__(self):
         return "%s: %s" % (self.mode, self.setpoint)

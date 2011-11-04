@@ -73,22 +73,18 @@ def event_loop():
     hold_setpoints = ScheduledHoldSetpoint.objects.filter(start__lte=now, end__gte=now)
     hold_setpoint = hold_setpoints[0] if hold_setpoints else None
 
-    if not recurring_setpoint and not hold_setpoint:
-        if cur_running_setpoint:
-            _save_datapoint(setpoint_signal, cur_running_setpoint)
-        return
-
     # Figure out which setpoint to use
     # Scheduled hold setpoints trump recurring weekly setpoints,
     # and manual override (from thermostat panel or web interface) trump all
-    last_recurring_setpoint = therm.last_recurring_setpoint
-    if not last_recurring_setpoint:
-        switch_periods = True
-    else:
-        if _get_date_this_week(recurring_setpoint, now=now) > _get_date_this_week(last_recurring_setpoint, now=now):
+    if recurring_setpoint:
+        last_recurring_setpoint = therm.last_recurring_setpoint
+        if not last_recurring_setpoint:
             switch_periods = True
         else:
-            switch_periods = False
+            if _get_date_this_week(recurring_setpoint, now=now) > _get_date_this_week(last_recurring_setpoint, now=now):
+                switch_periods = True
+            else:
+                switch_periods = False
 
     if hold_setpoint:
         last_hold_setpoint = therm.last_scheduled_setpoint
@@ -96,20 +92,30 @@ def event_loop():
             switch_periods = True
 
     therm.last_recurring_setpoint = recurring_setpoint
-    therm.last_hold_setpoint = hold_setpoint
+    therm.last_scheduled_setpoint = hold_setpoint
     therm.save()
 
     temp_to_set = None
     if recurring_setpoint:
         temp_to_set = recurring_setpoint.setpoint
+        new_mode = recurring_setpoint.mode
     if hold_setpoint:
         temp_to_set = hold_setpoint.setpoint
+        new_mode = hold_setpoint.mode
     if is_override and not switch_periods:
         temp_to_set = None
 
     if temp_to_set and temp_to_set != cur_running_setpoint:
-        set_name = 'a_heat' if cur_operating_mode == 1 else 'a_cool'
-        post(url, {set_name: temp_to_set, 'hold': 1, 'a_mode': 1})
+        if new_mode == 'auto':
+            new_mode = therm.mode
+        if new_mode == 'heat':
+            params = {'a_heat': temp_to_set, 'hold': 1, 'a_mode': 1}
+        elif new_mode == 'cool':
+            params = {'a_cool': temp_to_set, 'hold': 1, 'a_mode': 1}
+        if new_mode != therm.mode:
+            params.update({'tmode': 1 if new_mode == 'heat' else 2})
+        post(url, params)
+        # TODO: Handle auto mode
         _save_datapoint(setpoint_signal, temp_to_set)
     else:
         if cur_running_setpoint:

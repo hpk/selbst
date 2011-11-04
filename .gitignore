@@ -11,3 +11,4 @@ temp/*
 *.swo
 .coverage
 tags
+*.db
