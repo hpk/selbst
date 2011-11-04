@@ -4,7 +4,7 @@ from django.shortcuts import render_to_response
 from django.http import HttpResponse
 import json
 from dateutil import zoneinfo
-from datetime import datetime
+from datetime import datetime, timedelta
 from selbst.lib.thermostat import ThermostatClient
 
 def control(request):
@@ -31,6 +31,17 @@ def charts(request):
     all_sigs.append(Signal.objects.get(name='Heat On'))
     all_sigs.append(Signal.objects.get(name='Cool On'))
     context['all_sigs'] = all_sigs
+    hours = request.GET.get('hours', None)
+    days = request.GET.get('days', None)
+    weeks = request.GET.get('weeks', None)
+    if hours:
+        context['timeperiod'] = 'hours=%s' % hours
+    elif days:
+        context['timeperiod'] = 'days=%s' % days
+    elif weeks:
+        context['timeperiod'] = 'weeks=%s' % weeks
+    else:
+        context['timeperiod'] = 'days=1'
     return render_to_response('climatecontrol/charts.html', context)
 
 def data(request):
@@ -40,12 +51,24 @@ def data(request):
 
     start = request.GET.get('start', None)
     end = request.GET.get('end', datetime.now())
+    hours = request.GET.get('hours', None)
+    if not hours:
+        days = request.GET.get('days', None)
+        if days:
+            hours = int(days)*24
+    if not hours:
+        weeks = request.GET.get('weeks', None)
+        if weeks:
+            hours = int(weeks)*24*7
 
     signals = Signal.objects.filter(pk__in=ids)
     resp = {}
     resp['signals'] = []
     for s in signals:
-        if start:
+        if hours:
+            start = datetime.now() - timedelta(hours=int(hours))
+            time_series = s.signalvalue_set.filter(created__gte=start)
+        elif start:
             time_series = s.signalvalue_set.filter(created__range(start, end))
         else:
             time_series = s.signalvalue_set.filter(created__lte=end)

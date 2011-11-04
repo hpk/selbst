@@ -9,6 +9,7 @@
     <body>
         <div id="container"></div>
         <script type="text/javascript">
+            var timePeriod = '{{ timeperiod }}';
             var typemap = {
                 real: 'line',
                 bool: 'area',
@@ -56,6 +57,9 @@
                 $.each(idlist, function(idx,id) {
                     idstr += 'sids='+id+'&';
                 });
+                if (timePeriod) {
+                    idstr += timePeriod;
+                }
                 $.getJSON('/climate/data?'+idstr, function(resp) {
                     var signals = resp.signals;
                     var signaldata = [];
