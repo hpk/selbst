@@ -82,7 +82,7 @@ def event_loop():
     # Scheduled hold setpoints trump recurring weekly setpoints,
     # and manual override (from thermostat panel or web interface) trump all
     last_recurring_setpoint = therm.last_recurring_setpoint
-    if not last_setpoint:
+    if not last_recurring_setpoint:
         switch_periods = True
     else:
         if _get_date_this_week(recurring_setpoint, now=now) > _get_date_this_week(last_recurring_setpoint, now=now):
