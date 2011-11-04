@@ -1,0 +1,13 @@
+.DS_Store
+runserver.sh
+*.pyc
+*.pid
+*.log
+env/*
+temp/*
+\#*\#
+.\#*
+*.swp
+*.swo
+.coverage
+tags
