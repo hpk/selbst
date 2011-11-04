@@ -6,21 +6,22 @@ import json
 
 def charts(request):
     context = {}
-    return render_to_response('climatecontrol/charts.html', context)
-
-def data(request):
     therm = Thermostat.objects.all()[0]
     sensors = therm.thermostattemperaturesensor_set.all()
     signals = []
     for s in sensors:
         for sig in s.signal_set.all():
             signals.append(sig)
-    signals.append(Signal.objects.get(name='Heat On'))
-    signals.append(Signal.objects.get(name='Cool On'))
-    signals.append(Signal.objects.get(name='Temperature Setpoint'))
-    print sensors
-    print signals
+    context['default_sigs'] = signals + [Signal.objects.get(name='Temperature Setpoint')]
+    all_sigs = [s for s in context['default_sigs']]
+    all_sigs.append(Signal.objects.get(name='Heat On'))
+    all_sigs.append(Signal.objects.get(name='Cool On'))
+    context['all_sigs'] = all_sigs
+    return render_to_response('climatecontrol/charts.html', context)
 
+def data(request):
+    ids = request.GET.getlist('sids')
+    signals = Signal.objects.filter(pk__in=ids)
     resp = {}
     resp['signals'] = []
     for s in signals:

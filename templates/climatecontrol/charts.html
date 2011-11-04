@@ -8,10 +8,35 @@
     </head>
     <body>
         <div id="container"></div>
+        <div>
+            <ul>
+                {% for sig in all_sigs %}
+                    <li><input class="signal-select" type="checkbox" name="{{ sig.id }}" {% if sig in default_sigs %}checked="checked"{% endif %} />
+                    <label for="{{ sig.id }}">{{ sig }}</label>
+                    </li>
+                {% endfor %}
+            </ul>
+            <input type="submit" name="Submit" value="Submit" id="get-signals" />
+        </div>
         <script type="text/javascript">
             var chart;
-            $(document).ready(function() {
-                $.getJSON('/climate/data', function(resp) {
+            var signal_meta = [
+                {% for s in all_sigs %}
+                    {sid: {{ s.id }}, name: '{{ s }}' },
+                {% endfor %}
+            ];
+            var default_sigs = [
+                {% for s in default_sigs %}
+                    {{ s.id }},
+                {% endfor %}
+            ];
+
+            function getSignals(idlist, callback) {
+                var idstr = '';
+                $.each(idlist, function(idx,id) {
+                    idstr += 'sids='+id+'&';
+                });
+                $.getJSON('/climate/data?'+idstr, function(resp) {
                     var signals = resp.signals;
                     var signaldata = [];
                     $.each(signals, function(idx,sig) {
@@ -21,26 +46,67 @@
                         });
                         signaldata.push({name: sig.name, data: sigdata});
                     });
-                    console.log(signaldata);
+                    
+                    callback(signaldata);
+                });
+            }
+
+            $(document).ready(function() {
+                function createChart(signaldata) {
                     chart = new Highcharts.Chart({
                         chart: {
                             renderTo: 'container',
-                            type: 'spline'
+                            type: 'line'
                         },
                         title: {
                             text: 'Climate'
                         },
                         xAxis: {
                             type: 'datetime',
-                            },
+                        },
                         yAxis: {
                             title: {
                                 text: 'deg F'
-                                }
-                            },
+                            }
+                        },
                         series: signaldata
                     });
+                }
+                getSignals(default_sigs, createChart);
+
+                function updateChart(signaldata) {
+                    var newNames = [];
+                    var oldNames = [];
+                    $.each(signaldata, function(idx,d) {
+                        newNames.push(d.name);
+                    });
+                    $.each(chart.series, function(idx, d) {
+                        oldNames.push(d.name);
+                    });
+                    console.log(oldNames);
+                    console.log(newNames);
+                    $.each(chart.series, function(idx, s) {
+                        if (newNames.indexOf(s.name) == -1) {
+                            s.remove(false);
+                        }
+                    });
+                    $.each(signaldata, function(idx, s) {
+                        if (oldNames.indexOf(s.name) == -1) {
+                            chart.addSeries(s, false);
+                        }
+                    });
+                    chart.redraw();
+                };
+
+                $('#get-signals').click(function() {
+                    var idlist = [];
+                    $('.signal-select:checked').each(function(idx,itm) {
+                        idlist.push($(itm).attr('name'));
+                    });
+                    console.log(idlist);
+                    getSignals(idlist, updateChart);
                 });
+
             });
         </script>
     </body>
