@@ -1,18 +1,11 @@
 from twisted.internet import task, reactor
-import requests
-import json
 from datetime import datetime, timedelta
 from selbst.core.models import Signal, SignalValue
 from selbst.climatecontrol.models import Thermostat, RecurringWeeklySetpoint, ThermostatTemperatureSensor, ScheduledHoldSetpoint, WeatherLocation
 from selbst import weather
 from operator import attrgetter
 from django.conf import settings
-
-def post(path, data):
-    return json.loads(requests.post(path, json.dumps(data)).content)
-
-def get(path):
-    return json.loads(requests.get(path).content)
+from selbst.lib.thermostat import ThermostatClient
 
 def _get_date_this_week(recur_setpoint, now=None):
     if not now:
@@ -42,8 +35,8 @@ def _save_datapoint(signal, value):
 def thermostat_event_loop():
     now = datetime.now()
     therm = Thermostat.objects.all()[0]
-    url = "http://%s/tstat" % therm.ip_address
-    cur_state = get(url)
+    client = ThermostatClient(therm.ip_address)
+    cur_state = client.get("/tstat")
     cur_temp = cur_state.get('temp', None)
     cur_operating_mode = cur_state.get('tmode', 0)
     cur_hvac_state = cur_state.get('tstate', 0)
@@ -124,7 +117,7 @@ def thermostat_event_loop():
             params = {'a_cool': temp_to_set, 'hold': 1, 'a_mode': 1}
         if new_mode != therm.mode:
             params.update({'tmode': 1 if new_mode == 'heat' else 2})
-        post(url, params)
+        client.send("/tstat", params)
         # TODO: Handle auto mode
         _save_datapoint(setpoint_signal, temp_to_set)
     else:
