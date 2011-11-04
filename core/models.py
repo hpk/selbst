@@ -27,7 +27,7 @@ class Signal(TimeStampedModel):
 
     def __unicode__(self):
         if self.sensor:
-            return '%s Signal' % self.sensor
+            return self.sensor.name
         else:
             return self.name
 

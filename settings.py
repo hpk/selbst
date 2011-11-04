@@ -1,4 +1,5 @@
 # Django settings for selbst project.
+import os
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
@@ -71,11 +72,7 @@ STATIC_URL = '/static/'
 ADMIN_MEDIA_PREFIX = '/static/admin/'
 
 # Additional locations of static files
-STATICFILES_DIRS = (
-    # Put strings here, like "/home/html/static" or "C:/www/django/static".
-    # Always use forward slashes, even on Windows.
-    # Don't forget to use absolute paths, not relative paths.
-)
+STATICFILES_DIRS = (os.path.join(os.path.dirname(__file__), 'static'),)
 
 # List of finder classes that know how to find static files in
 # various locations.
@@ -92,7 +89,6 @@ SECRET_KEY = 'b06l!g#2!x$8q64*j62%)ym5@s1mp4+$+-1@rj(0&8ppizh1^&'
 TEMPLATE_LOADERS = (
     'django.template.loaders.filesystem.Loader',
     'django.template.loaders.app_directories.Loader',
-#     'django.template.loaders.eggs.Loader',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -106,9 +102,7 @@ MIDDLEWARE_CLASSES = (
 ROOT_URLCONF = 'selbst.urls'
 
 TEMPLATE_DIRS = (
-    # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
-    # Always use forward slashes, even on Windows.
-    # Don't forget to use absolute paths, not relative paths.
+    os.path.join(os.path.dirname(__file__), 'templates'),
 )
 
 INSTALLED_APPS = (

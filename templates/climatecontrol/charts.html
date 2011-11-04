@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Test</title>
+        <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
+        <script type="text/javascript" src="/static/js/date.js"></script>
+        <script type="text/javascript" src="/static/js/highcharts.js"></script>
+    </head>
+    <body>
+        <div id="container"></div>
+        <script type="text/javascript">
+            var chart;
+            $(document).ready(function() {
+                $.getJSON('/climate/data', function(resp) {
+                    var signals = resp.signals;
+                    var signaldata = [];
+                    $.each(signals, function(idx,sig) {
+                        var sigdata = [];
+                        $.each(sig.data, function(validx, itm) {
+                            sigdata.push([Date.parse(itm.t).valueOf(), itm.v]);
+                        });
+                        signaldata.push({name: sig.name, data: sigdata});
+                    });
+                    console.log(signaldata);
+                    chart = new Highcharts.Chart({
+                        chart: {
+                            renderTo: 'container',
+                            type: 'spline'
+                        },
+                        title: {
+                            text: 'Climate'
+                        },
+                        xAxis: {
+                            type: 'datetime',
+                            },
+                        yAxis: {
+                            title: {
+                                text: 'deg F'
+                                }
+                            },
+                        series: signaldata
+                    });
+                });
+            });
+        </script>
+    </body>
+</html>

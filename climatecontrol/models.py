@@ -41,6 +41,9 @@ class Thermostat(models.Model):
 class ThermostatTemperatureSensor(Sensor):
     thermostat = models.ForeignKey(Thermostat)
 
+    def __unicode__(self):
+        return self.name
+
 
 class TemperatureSetpoint(models.Model):
     # Can be specific to one thermostat, or apply to all

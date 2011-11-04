@@ -88,7 +88,7 @@ def event_loop():
 
     if hold_setpoint:
         last_hold_setpoint = therm.last_scheduled_setpoint
-        if last_hold_setpoint is not hold_setpoint:
+        if last_hold_setpoint != hold_setpoint:
             switch_periods = True
 
     therm.last_recurring_setpoint = recurring_setpoint
