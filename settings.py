@@ -148,3 +148,5 @@ LOGGING = {
         },
     }
 }
+
+WUNDERGROUND_API_KEY = '7925dcd7cce0ade4'

@@ -3,8 +3,10 @@ import requests
 import json
 from datetime import datetime, timedelta
 from selbst.core.models import Signal, SignalValue
-from selbst.climatecontrol.models import Thermostat, RecurringWeeklySetpoint, ThermostatTemperatureSensor, ScheduledHoldSetpoint
+from selbst.climatecontrol.models import Thermostat, RecurringWeeklySetpoint, ThermostatTemperatureSensor, ScheduledHoldSetpoint, WeatherLocation
+from selbst import weather
 from operator import attrgetter
+from django.conf import settings
 
 def post(path, data):
     return json.loads(requests.post(path, json.dumps(data)).content)
@@ -19,13 +21,16 @@ def _get_date_this_week(recur_setpoint, now=None):
     date_this_week = now + timedelta(days=wd_diff)
     return date_this_week.replace(hour=recur_setpoint.hour, minute=recur_setpoint.minute)
 
-def _get_signal(name=None, sensor=None):
+def _get_signal(name=None, sensor=None, value_type='real'):
     if name:
         signals = Signal.objects.filter(name=name)
     else:
         signals = Signal.objects.filter(sensor=sensor)
     if not signals:
-        return None
+        if name:
+            return Signal.objects.create(name=name, value_type=value_type)
+        else:
+            return Signal.objects.create(sensor=sensor, value_type=value_type)
     else:
         return signals[0]
 
@@ -34,7 +39,7 @@ def _save_datapoint(signal, value):
     sv.set_value(value)
     sv.save()
 
-def event_loop():
+def thermostat_event_loop():
     now = datetime.now()
     therm = Thermostat.objects.all()[0]
     url = "http://%s/tstat" % therm.ip_address
@@ -47,14 +52,19 @@ def event_loop():
     heat_setpoint = cur_state.get('t_heat', None)
     cool_setpoint = cur_state.get('t_cool', None)
 
+    if cur_state.get('error', None) or not cur_temp or cur_temp == -1:
+        print cur_state
+        return
+
     cur_running_setpoint = heat_setpoint if cur_operating_mode == 1 else cool_setpoint
 
     # Save data as signals
     tempsensor = ThermostatTemperatureSensor.objects.filter(thermostat=therm)[0]
-    indoor_temp_signal = _get_signal(sensor=tempsensor) or Signal.objects.create(sensor=tempsensor, value_type='real')
-    heat_on_signal = _get_signal(name='Heat On') or Signal.objects.create(name='Heat On', value_type='bool')
-    cool_on_signal = _get_signal(name='Cool On') or Signal.objects.create(name='Cool On', value_type='bool')
-    setpoint_signal = _get_signal(name='Temperature Setpoint') or Signal.objects.create(name='Temperature Setpoint', value_type='real')
+    indoor_temp_signal = _get_signal(sensor=tempsensor, value_type='real')
+    heat_on_signal = _get_signal(name='Heat On', value_type='bool')
+    cool_on_signal = _get_signal(name='Cool On', value_type='bool')
+    setpoint_signal = _get_signal(name='Temperature Setpoint', value_type='real')
+
     _save_datapoint(indoor_temp_signal, cur_temp)
     _save_datapoint(heat_on_signal, cur_hvac_state == 1)
     _save_datapoint(cool_on_signal, cur_hvac_state == 2)
@@ -122,6 +132,18 @@ def event_loop():
             _save_datapoint(setpoint_signal, cur_running_setpoint)
 
 
+def weather_event_loop():
+    client = weather.Client(key=settings.WUNDERGROUND_API_KEY)
+    locs = WeatherLocation.objects.all()
+    for loc in locs:
+        r = client.request(features=['conditions'], location=loc.location)
+        outside_temp = r['current_observation']['temp_f']
+        signal = _get_signal(sensor=loc, value_type='real')
+        _save_datapoint(signal, outside_temp)
+
+
 def start_daemon(*args, **kwargs):
-    l = task.LoopingCall(event_loop)
-    l.start(60.0) # Run every minute
+    tel = task.LoopingCall(thermostat_event_loop)
+    wel = task.LoopingCall(weather_event_loop)
+    tel.start(60.0) # Run every minute
+    wel.start(3600.0) # Run every hour

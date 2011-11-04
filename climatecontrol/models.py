@@ -71,4 +71,8 @@ class ScheduledHoldSetpoint(TemperatureSetpoint):
     def __unicode__(self):
         return "%s -> %s : %s" % (self.start, self.end, self.setpoint)
 
+class WeatherLocation(Sensor):
+    location = models.CharField(max_length=128)
 
+    def __unicode__(self):
+        return "Weather at %s" % self.location

@@ -1,4 +1,4 @@
-from selbst.climatecontrol.models import Thermostat, ThermostatTemperatureSensor
+from selbst.climatecontrol.models import Thermostat, ThermostatTemperatureSensor, WeatherLocation
 from selbst.core.models import Signal, SignalValue, Sensor
 from django.shortcuts import render_to_response
 from django.http import HttpResponse
@@ -11,6 +11,9 @@ def charts(request):
     sensors = therm.thermostattemperaturesensor_set.all()
     signals = []
     for s in sensors:
+        for sig in s.signal_set.all():
+            signals.append(sig)
+    for s in WeatherLocation.objects.all():
         for sig in s.signal_set.all():
             signals.append(sig)
     context['default_sigs'] = signals + [Signal.objects.get(name='Temperature Setpoint')]
