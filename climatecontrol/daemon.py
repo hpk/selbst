@@ -3,7 +3,7 @@ import requests
 import json
 from datetime import datetime, timedelta
 from selbst.core.models import Signal, SignalValue
-from selbst.climatecontrol.models import Thermostat, RecurringWeeklySetpoint, ThermostatTemperatureSensor
+from selbst.climatecontrol.models import Thermostat, RecurringWeeklySetpoint, ThermostatTemperatureSensor, ScheduledHoldSetpoint
 from operator import attrgetter
 
 def post(path, data):
@@ -59,42 +59,58 @@ def event_loop():
     _save_datapoint(heat_on_signal, cur_hvac_state == 1)
     _save_datapoint(cool_on_signal, cur_hvac_state == 2)
 
+    # Look up latest weekly recurring setpoint to use
     recurring_setpoints = RecurringWeeklySetpoint.objects.all()
     sorted_recurring = sorted(recurring_setpoints, key=attrgetter('day_of_week', 'hour', 'minute'))
-    scheduled = None
+    recurring_setpoint = None
     for s in sorted_recurring:
         date_this_week = _get_date_this_week(s, now=now)
         if date_this_week < now:
-            scheduled = s
+            recurring_setpoint = s
 
-    if not scheduled:
+    # See if we have any scheduled hold setpoints
+    # Doesn't make sense to have overlapping hold setpoints, so pick the first one we find
+    hold_setpoints = ScheduledHoldSetpoint.objects.filter(start__lte=now, end__gte=now)
+    hold_setpoint = hold_setpoints[0] if hold_setpoints else None
+
+    if not recurring_setpoint and not hold_setpoint:
         if cur_running_setpoint:
             _save_datapoint(setpoint_signal, cur_running_setpoint)
         return
 
-    scheduled_setpoint = scheduled.setpoint
-
-    last_setpoint = therm.last_recurring_setpoint
+    # Figure out which setpoint to use
+    # Scheduled hold setpoints trump recurring weekly setpoints,
+    # and manual override (from thermostat panel or web interface) trump all
+    last_recurring_setpoint = therm.last_recurring_setpoint
     if not last_setpoint:
         switch_periods = True
     else:
-        if _get_date_this_week(scheduled, now=now) > _get_date_this_week(last_setpoint, now=now):
+        if _get_date_this_week(recurring_setpoint, now=now) > _get_date_this_week(last_recurring_setpoint, now=now):
             switch_periods = True
         else:
             switch_periods = False
-    therm.last_recurring_setpoint = scheduled
+
+    if hold_setpoint:
+        last_hold_setpoint = therm.last_scheduled_setpoint
+        if last_hold_setpoint is not hold_setpoint:
+            switch_periods = True
+
+    therm.last_recurring_setpoint = recurring_setpoint
+    therm.last_hold_setpoint = hold_setpoint
     therm.save()
 
-    do_set = True
-    if scheduled_setpoint == cur_running_setpoint:
-        do_set = False
+    temp_to_set = None
+    if recurring_setpoint:
+        temp_to_set = recurring_setpoint.setpoint
+    if hold_setpoint:
+        temp_to_set = hold_setpoint.setpoint
     if is_override and not switch_periods:
-        do_set = False
+        temp_to_set = None
 
-    if do_set:
+    if temp_to_set and temp_to_set != cur_running_setpoint:
         set_name = 'a_heat' if cur_operating_mode == 1 else 'a_cool'
-        post(url, {set_name: scheduled_setpoint, 'hold': 1, 'a_mode': 1})
-        _save_datapoint(setpoint_signal, scheduled_setpoint)
+        post(url, {set_name: temp_to_set, 'hold': 1, 'a_mode': 1})
+        _save_datapoint(setpoint_signal, temp_to_set)
     else:
         if cur_running_setpoint:
             _save_datapoint(setpoint_signal, cur_running_setpoint)

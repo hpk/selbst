@@ -30,7 +30,8 @@ INT_TO_DAY = {
 
 class Thermostat(models.Model):
     ip_address = models.IPAddressField()
-    last_recurring_setpoint = models.ForeignKey('RecurringWeeklySetpoint', null=True, blank=True, related_name='thermostat_related')
+    last_recurring_setpoint = models.ForeignKey('RecurringWeeklySetpoint', null=True, blank=True, related_name='thermostat_recurring_setpoint')
+    last_scheduled_setpoint = models.ForeignKey('ScheduledHoldSetpoint', null=True, blank=True, related_name='thermostat_scheduled_setpoint')
 
     def __unicode__(self):
         return "Filtrete 3M-50 Radio Thermostat [%s]" % self.ip_address
