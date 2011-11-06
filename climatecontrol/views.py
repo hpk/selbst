@@ -5,6 +5,7 @@ from django.http import HttpResponse
 import json
 from dateutil import zoneinfo
 from datetime import datetime, timedelta
+import time
 from selbst.lib.thermostat import ThermostatClient
 
 def control(request):
@@ -45,8 +46,6 @@ def charts(request):
     return render_to_response('climatecontrol/charts.html', context)
 
 def data(request):
-    timezone = zoneinfo.gettz('US/Central')
-    utc = zoneinfo.gettz('UTC')
     ids = request.GET.getlist('sids')
 
     start = request.GET.get('start', None)
@@ -74,7 +73,7 @@ def data(request):
             time_series = s.signalvalue_set.filter(created__lte=end)
         signal_data = {
             'name': unicode(s),
-            'data': [{'t':d.created.replace(microsecond=0).isoformat(), 'v':d.value} for d in time_series],
+            'data': [{'t':int(time.mktime(d.created.replace(microsecond=0).timetuple())), 'v':d.value} for d in time_series],
             'type':s.value_type
         }
         resp['signals'].append(signal_data)

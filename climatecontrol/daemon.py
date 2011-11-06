@@ -32,7 +32,8 @@ def _save_datapoint(signal, value):
     sv.set_value(value)
     sv.save()
 
-def thermostat_event_loop():
+
+def control_thermostat():
     now = datetime.now()
     therm = Thermostat.objects.all()[0]
     client = ThermostatClient(therm.ip_address)
@@ -124,8 +125,14 @@ def thermostat_event_loop():
         if cur_running_setpoint:
             _save_datapoint(setpoint_signal, cur_running_setpoint)
 
+def thermostat_event_loop():
+    try:
+        control_thermostat()
+    except:
+        pass
 
-def weather_event_loop():
+
+def get_weather_data():
     client = weather.Client(key=settings.WUNDERGROUND_API_KEY)
     locs = WeatherLocation.objects.all()
     for loc in locs:
@@ -133,6 +140,12 @@ def weather_event_loop():
         outside_temp = r['current_observation']['temp_f']
         signal = _get_signal(sensor=loc, value_type='real')
         _save_datapoint(signal, outside_temp)
+
+def weather_event_loop():
+    try:
+        get_weather_data()
+    except:
+        pass
 
 
 def start_daemon(*args, **kwargs):

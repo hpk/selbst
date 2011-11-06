@@ -3,7 +3,7 @@
     <head>
         <title>Test</title>
         <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
-        <script type="text/javascript" src="/static/js/date.js"></script>
+        <!--<script type="text/javascript" src="/static/js/date.js"></script>--!>
         <script type="text/javascript" src="/static/js/highcharts.js"></script>
     </head>
     <body>
@@ -66,7 +66,9 @@
                     $.each(signals, function(idx,sig) {
                         var sigdata = [];
                         $.each(sig.data, function(validx, itm) {
-                            sigdata.push([Date.parse(itm.t).valueOf(), itm.v]);
+                            var date = new Date(itm.t*1000);
+                            console.log(date.toString());
+                            sigdata.push([new Date(itm.t*1000).valueOf(), itm.v]);
                         });
                         signaldata.push({
                             name: sig.name, 
@@ -83,12 +85,12 @@
 
             $(document).ready(function() {
                 function createChart(signaldata) {
+                    Highcharts.setOptions({global: {useUTC: false}});
                     chart = new Highcharts.Chart({
                         chart: {
                             renderTo: 'container',
                             zoomType: 'x'
                         },
-                        global: { useUTC: true},
                         credits: {
                             enabled: false
                         },
@@ -121,6 +123,7 @@
                         }],
                         series: signaldata
                     });
+
                 }
                 getSignals(default_sigs, createChart);
 
