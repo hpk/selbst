@@ -1,21 +1,35 @@
 from selbst.climatecontrol.models import Thermostat, ThermostatTemperatureSensor, WeatherLocation
 from selbst.core.models import Signal, SignalValue, Sensor
 from django.shortcuts import render_to_response
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
+from django.core.context_processors import csrf
+from django.contrib.auth.decorators import login_required
 import json
 from dateutil import zoneinfo
 from datetime import datetime, timedelta
 import time
 from selbst.lib.thermostat import ThermostatClient
 
+@login_required
 def control(request):
     therm = Thermostat.objects.all()[0]
     client = ThermostatClient(therm.ip_address)
     if request.method == 'POST':
-        pass
+        temp_setpoint = request.POST.get('temp')
+        hold = request.POST.get('hold')
+        params = {'a_heat': float(temp_setpoint)}
+        client.send('/tstat', params)
+        return HttpResponseRedirect('/climate')
     else:
-        pass
+        context = {}
+        context.update(csrf(request))
+        cur_state = client.get('/tstat')
+        context['current_temp'] = cur_state.get('temp', None)
+        context['setpoint'] = cur_state.get('t_heat', None)
+        context['heat_on'] = cur_state.get('tstate') == 1
+        return render_to_response('climatecontrol/index.html', context)
 
+@login_required
 def charts(request):
     context = {}
     therm = Thermostat.objects.all()[0]

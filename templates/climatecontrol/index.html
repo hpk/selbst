@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <form action="/climate" method="POST">{% csrf_token %}
+        <div class="grid_4 prefix_4 suffix_4">
+            <h2>Climate Status</h2>
+        </div>
+        <div class="clear"></div>
+        <div class="grid_4 prefix_4 suffix_4">
+            <h3>Currently {{ current_temp }}&deg; F</h3>
+            <h3>Heat is {% if heat_on %}ON{% else %}OFF{% endif %}</h3>
+            <label for="temp">Setpoint</label>
+            <input type="text" name="temp" value="{{ setpoint }}" />
+            <input type="submit" name="submit" value="Submit" />
+            <br />
+            <a href="/climate/charts">Chart</a>
+        </div>
+    </form>
+{% endblock %}
