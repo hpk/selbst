@@ -77,21 +77,22 @@ def data(request):
     resp = {}
     resp_signals = {}
 
-    svals = SignalValue.objects.select_related('signal').filter(signal__id__in=ids)
-    if hours:
-        start = datetime.now() - timedelta(hours=int(hours))
-        svals = svals.filter(created__gte=start)
-    elif start:
-        svals = svals.filter(created__range(start, end))
-    else:
-        svals = svals.filter(created__lte=end)
-    for s in svals:
-        signal_name = s.signal.name
-        if signal_name not in resp_signals:
-            resp_signals[signal_name] = {'name': s.signal.name, 'data': [], 'type': s.signal.value_type}
-        resp_signals[signal_name]['data'].append({'t': int(time.mktime(s.created.replace(microsecond=0).timetuple())), 'v': s.value})
-
-    resp['signals'] = resp_signals.values()
-
+    signals = Signal.objects.filter(pk__in=ids)
+    resp = {}
+    resp['signals'] = []
+    for s in signals:
+        if hours:
+            start = datetime.now() - timedelta(hours=int(hours))
+            time_series = s.signalvalue_set.filter(created__gte=start)
+        elif start:
+            time_series = s.signalvalue_set.filter(created__range(start, end))
+        else:
+            time_series = s.signalvalue_set.filter(created__lte=end)
+        signal_data = {
+            'name': s.name,
+            'data': [{'t': int(time.mktime(v[0].replace(microsecond=0).timetuple())), 'v': v[1]} for v in time_series.values_list('created', 'value')]
+            'type': s.value_type
+        }
+        resp['signals'].append(signal_data)
     return HttpResponse(json.dumps(resp), mimetype='application/javascript')
 
