@@ -29,7 +29,7 @@ def report(request):
 
     sig, _ = Signal.objects.get_or_create(name="%s at home" % ploc.name, value_type='bool')
     sv = SignalValue(signal=sig)
-    sv.set_value(plot.at_home)
+    sv.set_value(ploc.at_home)
     sv.save()
     
     return HttpResponse('')
