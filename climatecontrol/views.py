@@ -74,6 +74,26 @@ def data(request):
         if weeks:
             hours = int(weeks)*24*7
 
+    resp = {}
+    resp_signals = {}
+
+    svals = SignalValue.objects.select_related('signal').filter(signal__id__in=ids)
+    if hours:
+        start = datetime.now() - timedelta(hours=int(hours))
+        svals = svals.filter(created__gte=start)
+    elif start:
+        svals = svals.filter(created__range(start, end))
+    else:
+        svals = svals.filter(created__lte=end)
+    for s in svals:
+        signal_name = s.signal.name
+        if signal_name not in resp_signals:
+            resp_signals[signal_name] = {'name': unicode(s.signal), 'data': [], 'type': s.signal.value_type}
+        resp_signals[signal_name].append({'t': int(time.mktime(s.created.replace(microseconds=0).timetuple())), 'v': s.value})
+
+    resp['signals'] = resp_signals.values()
+
+    """
     signals = Signal.objects.filter(pk__in=ids)
     resp = {}
     resp['signals'] = []
@@ -91,5 +111,6 @@ def data(request):
             'type':s.value_type
         }
         resp['signals'].append(signal_data)
+    """
     return HttpResponse(json.dumps(resp), mimetype='application/javascript')
 
