@@ -88,29 +88,10 @@ def data(request):
     for s in svals:
         signal_name = s.signal.name
         if signal_name not in resp_signals:
-            resp_signals[signal_name] = {'name': unicode(s.signal), 'data': [], 'type': s.signal.value_type}
-        resp_signals[signal_name].append({'t': int(time.mktime(s.created.replace(microseconds=0).timetuple())), 'v': s.value})
+            resp_signals[signal_name] = {'name': s.signal.name, 'data': [], 'type': s.signal.value_type}
+        resp_signals[signal_name]['data'].append({'t': int(time.mktime(s.created.replace(microsecond=0).timetuple())), 'v': s.value})
 
     resp['signals'] = resp_signals.values()
 
-    """
-    signals = Signal.objects.filter(pk__in=ids)
-    resp = {}
-    resp['signals'] = []
-    for s in signals:
-        if hours:
-            start = datetime.now() - timedelta(hours=int(hours))
-            time_series = s.signalvalue_set.filter(created__gte=start)
-        elif start:
-            time_series = s.signalvalue_set.filter(created__range(start, end))
-        else:
-            time_series = s.signalvalue_set.filter(created__lte=end)
-        signal_data = {
-            'name': unicode(s),
-            'data': [{'t':int(time.mktime(d.created.replace(microsecond=0).timetuple())), 'v':d.value} for d in time_series],
-            'type':s.value_type
-        }
-        resp['signals'].append(signal_data)
-    """
     return HttpResponse(json.dumps(resp), mimetype='application/javascript')
 
