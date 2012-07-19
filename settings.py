@@ -118,13 +118,14 @@ INSTALLED_APPS = (
     # 'django.contrib.admindocs',
     'core',
     'climatecontrol',
+    'location',
     'south',
 )
 
 DAEMON_FNS = (
     'selbst.climatecontrol.daemon.start_daemon',
     'selbst.core.daemon.start_daemon',
-    )
+)
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
@@ -150,3 +151,9 @@ LOGGING = {
 }
 
 WUNDERGROUND_API_KEY = '7925dcd7cce0ade4'
+
+HOME_LOCATION = {
+    'latitude': 44.918775,
+    'longitude': -93.322337,
+    'radius': 100.0
+}
