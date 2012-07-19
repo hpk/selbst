@@ -27,7 +27,7 @@ def report(request):
         ploc.at_home = True
     ploc.save()
 
-    sig = Signal.objects.get_or_create("%s at home" % ploc.name, value_type='bool')
+    sig, _ = Signal.objects.get_or_create(name="%s at home" % ploc.name, value_type='bool')
     sv = SignalValue(signal=sig)
     sv.set_value(plot.at_home)
     sv.save()
